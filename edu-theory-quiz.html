@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>교육학 각론 빈칸 퀴즈</title>
+<title>교육학</title>
 <style>
   :root{
     --bg:#ffffff; --card:#ffffff; --card2:#f4f6fb; --border:#dde3ee;
@@ -67,13 +67,28 @@
   .unittag{font-size:12px; color:var(--accent2); text-transform:none; margin-bottom:8px; font-weight:700;}
   .qprompt{font-size:16px; font-weight:500; line-height:2.1; margin-bottom:4px; overflow-wrap:break-word;}
   .blankwrap{display:inline-block; margin:0 2px; vertical-align:middle;}
-  select.blanksel{
-    font-size:14px; font-weight:700; color:var(--accent2); border:none; border-bottom:2px solid var(--accent);
-    background:var(--card2); padding:4px 6px; border-radius:6px; cursor:pointer; max-width:100%;
+  .blankslot{
+    display:inline-block; min-width:70px; padding:2px 8px; border-bottom:2px solid var(--accent);
+    font-weight:700; color:var(--accent2); text-align:center; background:var(--card2); border-radius:6px 6px 0 0;
   }
-  select.blanksel:disabled{opacity:.9; cursor:default;}
-  select.blanksel.correct{color:var(--ok); border-bottom-color:var(--ok); background:rgba(31,157,99,.12);}
-  select.blanksel.wrong{color:var(--bad); border-bottom-color:var(--bad); background:rgba(217,58,82,.12);}
+  .blankslot.empty{color:var(--muted); font-weight:500;}
+  .blankslot.correct{color:var(--ok); border-bottom-color:var(--ok); background:rgba(31,157,99,.12);}
+  .blankslot.wrong{color:var(--bad); border-bottom-color:var(--bad); background:rgba(217,58,82,.12);}
+
+  .choicegroups{display:flex; flex-direction:column; gap:14px; margin-top:18px;}
+  .choicegroup-label{font-size:12px; color:var(--muted); font-weight:700; margin-bottom:6px;}
+  .choicebtnrow{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  @media (max-width:480px){ .choicebtnrow{grid-template-columns:1fr;} }
+  .choicebtn{
+    display:block; width:100%; padding:11px 14px; border-radius:10px; border:2px solid var(--border);
+    background:var(--card2); color:var(--text); font-weight:600; font-size:13.5px; cursor:pointer; transition:.12s;
+    text-align:left;
+  }
+  .choicebtn:hover:not(:disabled){filter:brightness(1.2);}
+  .choicebtn.selected{border-color:var(--accent); background:rgba(61,110,224,.14);}
+  .choicebtn:disabled{opacity:.55; cursor:default;}
+  .choicebtn.correct{background:var(--ok); border-color:var(--ok); color:#fff; opacity:1;}
+  .choicebtn.wrong{background:var(--bad); border-color:var(--bad); color:#fff; opacity:1;}
   input.blankinp{
     display:inline-block; box-sizing:border-box; min-width:90px; max-width:100%; border:none; border-bottom:2px solid var(--accent);
     background:transparent; font-weight:700; color:var(--accent2); padding:3px 4px;
@@ -114,7 +129,7 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>교육학 각론 빈칸 퀴즈</h1>
+  <h1>교육학</h1>
   <div class="sub">범위를 선택하고 문장의 빈칸을 채워보세요. 처음엔 4지선다, 한 번 맞히면 그 다음부턴 직접 입력으로 심화됩니다.</div>
 
   <!-- 설정 화면 -->
@@ -143,6 +158,7 @@
       <div class="unittag" id="q-unittag"></div>
       <span class="modechip" id="q-modechip"></span>
       <div class="qprompt" id="q-prompt" style="margin-top:10px;"></div>
+      <div class="choicegroups" id="q-choicegroups"></div>
       <div class="actionrow"><button class="actbtn primary" id="btn-check">정답 확인</button></div>
       <div class="feedback" id="q-feedback"></div>
       <div class="actionrow" id="next-row" style="display:none;"><button class="actbtn primary" id="btn-next">다음 문제</button></div>
@@ -387,7 +403,10 @@ function nextQuestion(){
   renderQuestion();
 }
 
+let mcSelections = {}; // blankIdx -> selected text (mc 모드에서만 사용)
+
 function renderQuestion(){
+  mcSelections = {};
   document.getElementById('q-unittag').textContent = curItem.subjName + ' · ' + curItem.unitName;
   const chip = document.getElementById('q-modechip');
   if(curMode === 'mc'){
@@ -399,23 +418,32 @@ function renderQuestion(){
   }
 
   const promptEl = document.getElementById('q-prompt');
+  const groupsEl = document.getElementById('q-choicegroups');
   let html = '';
+  let groupsHtml = '';
   const exclude = curItem.answers.slice();
+  const blankCount = curItem.answers.length;
   curItem.parts.forEach(part=>{
     if(part.type === 'text'){
       html += escapeHtml(part.v);
     } else if(curMode === 'mc'){
+      html += '<span class="blankwrap"><span class="blankslot empty" id="slot-'+part.idx+'" data-correct="'+escapeHtml(part.v)+'">'+(blankCount>1 ? ('빈칸 '+(part.idx+1)) : '?')+'</span></span>';
       const distractors = pickDistractors(part.v, curItem.unitId, exclude, 3);
       const options = shuffle([part.v].concat(distractors));
-      let sel = '<select class="blanksel" data-idx="'+part.idx+'" data-correct="'+escapeHtml(part.v)+'"><option value="" selected disabled>선택...</option>';
-      options.forEach(o=> sel += '<option value="'+escapeHtml(o)+'">'+escapeHtml(o)+'</option>');
-      sel += '</select>';
-      html += '<span class="blankwrap">'+sel+'</span>';
+      groupsHtml += '<div class="choicegroup" data-idx="'+part.idx+'">';
+      if(blankCount>1) groupsHtml += '<div class="choicegroup-label">빈칸 '+(part.idx+1)+'</div>';
+      groupsHtml += '<div class="choicebtnrow">';
+      options.forEach(o=>{
+        groupsHtml += '<button type="button" class="choicebtn" data-idx="'+part.idx+'" data-val="'+escapeHtml(o)+'">'+escapeHtml(o)+'</button>';
+      });
+      groupsHtml += '</div></div>';
     } else {
       html += '<span class="blankwrap"><input type="text" class="blankinp" data-idx="'+part.idx+'" data-correct="'+escapeHtml(part.v)+'" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="width:'+Math.max(60, part.v.length*16)+'px;"></span>';
     }
   });
   promptEl.innerHTML = html;
+  groupsEl.innerHTML = groupsHtml;
+  groupsEl.style.display = curMode === 'mc' ? 'flex' : 'none';
 
   document.getElementById('q-feedback').className = 'feedback';
   document.getElementById('q-feedback').innerHTML = '';
@@ -423,7 +451,19 @@ function renderQuestion(){
   document.getElementById('btn-check').disabled = false;
   document.getElementById('btn-check').style.display = '';
 
-  if(curMode === 'type'){
+  if(curMode === 'mc'){
+    groupsEl.querySelectorAll('.choicebtn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        if(answered) return;
+        const idx = btn.dataset.idx;
+        mcSelections[idx] = btn.dataset.val;
+        groupsEl.querySelectorAll('.choicebtn[data-idx="'+idx+'"]').forEach(b=> b.classList.toggle('selected', b===btn));
+        const slot = document.getElementById('slot-'+idx);
+        slot.textContent = btn.dataset.val;
+        slot.classList.remove('empty');
+      });
+    });
+  } else {
     const inputs = Array.from(promptEl.querySelectorAll('.blankinp'));
     inputs.forEach((inp,i)=>{
       inp.addEventListener('keydown', e=>{
@@ -442,14 +482,25 @@ function checkAnswer(){
   if(answered) return;
   answered = true;
   const promptEl = document.getElementById('q-prompt');
+  const groupsEl = document.getElementById('q-choicegroups');
   let allCorrect = true;
 
   if(curMode === 'mc'){
-    promptEl.querySelectorAll('.blanksel').forEach(sel=>{
-      const ok = sel.value === sel.dataset.correct;
-      sel.disabled = true;
-      sel.classList.add(ok ? 'correct' : 'wrong');
-      if(!ok){ allCorrect = false; sel.value = sel.dataset.correct; }
+    groupsEl.querySelectorAll('.choicegroup').forEach(group=>{
+      const idx = group.dataset.idx;
+      const slot = document.getElementById('slot-'+idx);
+      const correct = slot.dataset.correct;
+      const chosen = mcSelections[idx];
+      const ok = chosen === correct;
+      if(!ok) allCorrect = false;
+      slot.textContent = correct;
+      slot.classList.remove('empty');
+      slot.classList.add(ok ? 'correct' : 'wrong');
+      group.querySelectorAll('.choicebtn').forEach(btn=>{
+        btn.disabled = true;
+        if(btn.dataset.val === correct) btn.classList.add('correct');
+        else if(btn.dataset.val === chosen) btn.classList.add('wrong');
+      });
     });
   } else {
     promptEl.querySelectorAll('.blankinp').forEach(inp=>{
@@ -467,7 +518,6 @@ function checkAnswer(){
   fb.className = 'feedback show ' + (allCorrect ? 'correct' : 'wrong');
   let html = '<div class="fbtitle '+(allCorrect?'ok':'no')+'">' + (allCorrect ? '✔ 정답입니다!' : '✘ 오답입니다.') + '</div>';
   html += '<div class="fbans">정답: <b>' + curItem.answers.map(escapeHtml).join(', ') + '</b></div>';
-  if(allCorrect && curMode==='mc') html += '<div class="fbans">👍 이 문항은 이제부터 <b>직접 입력</b> 모드로 출제됩니다.</div>';
   if(curItem.memo) html += '<div class="fbmemo">메모: ' + escapeHtml(curItem.memo) + '</div>';
   fb.innerHTML = html;
 
