@@ -36,7 +36,14 @@
   .unitlist.open{display:block;}
   .unitrow{display:flex; align-items:center; gap:10px; padding:7px 4px; font-size:13.5px; cursor:pointer;}
   .unitrow:hover{color:var(--accent2);}
-  .unitrow .ucnt{margin-left:auto; font-size:11.5px; color:var(--muted);}
+  .unitrow .ucnt{margin-left:8px; font-size:11.5px; color:var(--muted);}
+  .rowstat{margin-left:auto; display:flex; align-items:center; gap:8px; font-size:11px; color:var(--muted); white-space:nowrap;}
+  .rowstat .rs-bar{width:46px; height:6px; border-radius:4px; background:var(--border); overflow:hidden;}
+  .rowstat .rs-fill{height:100%; background:var(--warn);}
+  .rowstat .rs-txt b{color:var(--accent2);}
+  .rowstat .rs-acc b{color:var(--ok);}
+  .subjhead .rowstat{margin-left:auto;}
+  .subjhead .cnt{margin-left:8px;}
   .chkbox{width:16px; height:16px; border-radius:4px; border:1.5px solid var(--border); flex:0 0 auto; position:relative;}
   .chkbox.on{border-color:var(--accent); background:var(--accent);}
   .chkbox.on::after{content:'✓'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:10px; color:#fff;}
@@ -58,7 +65,7 @@
   .quizhead{display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap;}
   .masktoggle{flex:1; display:flex; align-items:center; gap:6px; font-size:13px; color:var(--muted); cursor:pointer; user-select:none;}
   .masktoggle input{width:16px; height:16px; cursor:pointer;}
-  .progresschip{font-size:12px; color:var(--muted); background:var(--card2); border:1px solid var(--border); padding:5px 10px; border-radius:20px;}
+  .progresschip{margin-left:auto; font-size:12px; color:var(--muted); background:var(--card2); border:1px solid var(--border); padding:5px 10px; border-radius:20px;}
   .progresschip b{color:var(--text);}
   .modechip{font-size:11px; font-weight:700; padding:4px 10px; border-radius:14px;}
   .modechip.mc{background:rgba(61,110,224,.13); color:var(--accent2);}
@@ -117,15 +124,6 @@
   .feedback .fbans{font-size:13px; color:var(--muted); margin-top:4px;}
   .feedback .fbans b{color:var(--text);}
   .feedback .fbmemo{font-size:12.5px; color:var(--muted); margin-top:8px; border-top:1px dashed var(--border); padding-top:8px;}
-
-  .stats-summary{display:flex; gap:12px; flex-wrap:wrap; margin-top:14px;}
-  .statbox.prog .snum{color:var(--warn);}
-  .statbox{flex:1; min-width:100px; background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; text-align:center;}
-  .statbox .snum{font-size:22px; font-weight:800; color:var(--text);}
-  .statbox .slabel{font-size:11.5px; color:var(--muted); margin-top:2px;}
-  .statbox.ok .snum{color:var(--ok);}
-  .statbox.bad .snum{color:var(--bad);}
-  .statbox.mst .snum{color:var(--accent2);}
 </style>
 </head>
 <body>
@@ -139,6 +137,7 @@
       <button class="btn small" id="btn-select-all">전체 선택</button>
       <button class="btn small" id="btn-select-none">전체 해제</button>
       <button class="btn small" id="btn-reset-mastery">학습 진행 초기화</button>
+      <label class="masktoggle"><input type="checkbox" id="chk-exclude-mastered"> 마스터한 문항 제외하고 출제</label>
     </div>
     <div id="subject-list"></div>
     <div class="startbar">
@@ -151,7 +150,6 @@
   <div class="panel" id="panel-quiz">
     <div class="quizhead">
       <button class="actbtn" id="btn-back">← 범위 설정</button>
-      <label class="masktoggle"><input type="checkbox" id="chk-exclude-mastered"> 마스터한 문항 제외</label>
       <span class="progresschip" id="progress-chip"></span>
     </div>
     <div class="card">
@@ -163,7 +161,6 @@
       <div class="feedback" id="q-feedback"></div>
       <div class="actionrow" id="next-row" style="display:none;"><button class="actbtn primary" id="btn-next">다음 문제</button></div>
     </div>
-    <div class="stats-summary" id="scope-stats"></div>
   </div>
 </div>
 
@@ -254,6 +251,31 @@ let selectedUnits = new Set(storeGet('selectedUnits', ALL_UNITS.map(u=>u.unitId)
 
 function unitItemCount(u){ return u.items.length; }
 
+// 단원(들)의 진행률(마스터 비율)·정답률 집계
+function aggStats(units){
+  let total=0, mastered=0, attempts=0, correct=0;
+  units.forEach(u=>{
+    total += u.items.length;
+    mastered += u.items.filter(it=>isMastered(it.uid)).length;
+    const s = stats[u.unitId] || {total:0, correct:0};
+    attempts += s.total; correct += s.correct;
+  });
+  return {
+    total, mastered, attempts, correct,
+    progress: total ? Math.round(mastered/total*100) : 0,
+    accuracy: attempts ? Math.round(correct/attempts*100) : null
+  };
+}
+
+function rowStatHtml(a){
+  const acc = a.accuracy===null ? '<span class="rs-acc">정답 –</span>'
+                                : '<span class="rs-acc">정답 <b>'+a.accuracy+'%</b></span>';
+  return '<span class="rowstat">' +
+    '<span class="rs-bar"><span class="rs-fill" style="width:'+a.progress+'%"></span></span>' +
+    '<span class="rs-txt">진행 <b>'+a.progress+'%</b></span>' + acc +
+  '</span>';
+}
+
 function renderSetup(){
   const container = document.getElementById('subject-list');
   container.innerHTML = '';
@@ -268,6 +290,7 @@ function renderSetup(){
         '<span class="chkbox'+(allOn?' on':'')+'" data-subjtoggle="'+s.id+'"></span>' +
         '<span>'+escapeHtml(s.name)+'</span>' +
         '<span class="caret">▶</span>' +
+        rowStatHtml(aggStats(units)) +
         '<span class="cnt">'+totalCnt+'문항</span>' +
       '</div>' +
       '<div class="unitlist open" data-unitlist="'+s.id+'"></div>';
@@ -281,6 +304,7 @@ function renderSetup(){
       row.innerHTML =
         '<span class="chkbox'+(on?' on':'')+'"></span>' +
         '<span>'+escapeHtml(u.unitName)+'</span>' +
+        rowStatHtml(aggStats([u])) +
         '<span class="ucnt">'+unitItemCount(u)+'문항</span>';
       row.addEventListener('click', ()=>{
         if(selectedUnits.has(u.unitId)) selectedUnits.delete(u.unitId);
@@ -342,8 +366,6 @@ excludeChk.checked = excludeMastered;
 excludeChk.addEventListener('change', ()=>{
   excludeMastered = excludeChk.checked;
   storeSet('excludeMastered', excludeMastered);
-  renderProgress();
-  nextQuestion();
 });
 
 // 현재 출제 대상 풀(제외 옵션 반영)
@@ -386,26 +408,6 @@ function renderProgress(){
   const total = quizPool.length;
   const masteredCnt = quizPool.filter(it=>isMastered(it.uid)).length;
   document.getElementById('progress-chip').innerHTML = '<b>'+masteredCnt+'</b> / '+total+' 마스터';
-
-  // 정답률: 선택 범위에 속한 unit들의 누적 풀이 통계 합산(unit별 1회)
-  const agg = {total:0, correct:0};
-  const seenUnits = new Set();
-  quizPool.forEach(it=>{
-    if(seenUnits.has(it.unitId)) return;
-    seenUnits.add(it.unitId);
-    const s = stats[it.unitId] || {total:0, correct:0};
-    agg.total += s.total; agg.correct += s.correct;
-  });
-  const wrong = agg.total - agg.correct;
-  const rate = agg.total ? Math.round(agg.correct/agg.total*100) : 0;
-  // 진행률: 이 범위에서 마스터한 문항 비율
-  const progress = total ? Math.round(masteredCnt/total*100) : 0;
-  document.getElementById('scope-stats').innerHTML =
-    '<div class="statbox"><div class="snum">'+agg.total+'</div><div class="slabel">이 범위 풀이 수</div></div>' +
-    '<div class="statbox ok"><div class="snum">'+agg.correct+'</div><div class="slabel">정답</div></div>' +
-    '<div class="statbox bad"><div class="snum">'+wrong+'</div><div class="slabel">오답</div></div>' +
-    '<div class="statbox mst"><div class="snum">'+rate+'%</div><div class="slabel">정답률</div></div>' +
-    '<div class="statbox prog"><div class="snum">'+progress+'%</div><div class="slabel">진행률 ('+masteredCnt+'/'+total+')</div></div>';
 }
 
 function showAllMastered(){
