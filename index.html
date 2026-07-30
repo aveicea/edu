@@ -26,24 +26,25 @@
   }
 
   /* ---- 설정 화면 ---- */
-  .setup-toolbar{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;}
+  .setup-toolbar{display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap; padding-right:14px;}
   .subjblock{border:1px solid var(--border); border-radius:12px; margin-bottom:12px; overflow:hidden;}
   .subjhead{display:flex; align-items:center; gap:10px; padding:12px 14px; background:var(--card2); cursor:pointer; user-select:none;}
-  .subjhead .cnt{margin-left:auto; font-size:12px; color:var(--muted);}
+  .subjhead .cnt{font-size:12px; color:var(--muted);}
   .subjhead .caret{font-size:11px; color:var(--muted); transition:.15s;}
   .subjhead.open .caret{transform:rotate(90deg);}
   .unitlist{display:none; padding:8px 14px 12px;}
   .unitlist.open{display:block;}
   .unitrow{display:flex; align-items:center; gap:10px; padding:7px 4px; font-size:13.5px; cursor:pointer;}
   .unitrow:hover{color:var(--accent2);}
-  .unitrow .ucnt{margin-left:8px; font-size:11.5px; color:var(--muted);}
-  .rowstat{margin-left:auto; display:flex; align-items:center; gap:8px; font-size:11px; color:var(--muted); white-space:nowrap;}
-  .rowstat .rs-bar{width:46px; height:6px; border-radius:4px; background:var(--border); overflow:hidden;}
+  .unitrow .ucnt{font-size:11.5px; color:var(--muted);}
+  .rowstat{margin-left:auto; display:flex; align-items:center; gap:8px; font-size:11px; color:var(--muted); white-space:nowrap; width:150px; flex:0 0 auto;}
+  .rowstat .rs-bar{width:46px; height:6px; border-radius:4px; background:var(--border); overflow:hidden; flex:0 0 auto;}
   .rowstat .rs-fill{height:100%; background:var(--warn);}
+  .rowstat .rs-txt{min-width:56px;}
+  .rowstat .rs-acc{min-width:52px;}
   .rowstat .rs-txt b{color:var(--accent2);}
   .rowstat .rs-acc b{color:var(--ok);}
-  .subjhead .rowstat{margin-left:auto;}
-  .subjhead .cnt{margin-left:8px;}
+  .subjhead .cnt, .unitrow .ucnt, #overall-cnt{width:52px; text-align:right; margin-left:8px; flex:0 0 auto; font-size:12px; color:var(--muted);}
   .chkbox{width:16px; height:16px; border-radius:4px; border:1.5px solid var(--border); flex:0 0 auto; position:relative;}
   .chkbox.on{border-color:var(--accent); background:var(--accent);}
   .chkbox.on::after{content:'✓'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:10px; color:#fff;}
@@ -139,6 +140,7 @@
       <button class="btn small" id="btn-reset-mastery">학습 진행 초기화</button>
       <label class="masktoggle"><input type="checkbox" id="chk-exclude-mastered"> 마스터한 문항 제외하고 출제</label>
       <span class="rowstat" id="overall-stat" style="margin-left:auto;"></span>
+      <span class="cnt" id="overall-cnt"></span>
     </div>
     <div id="subject-list"></div>
     <div class="startbar">
@@ -336,6 +338,7 @@ function renderSetup(){
   document.getElementById('btn-start').disabled = selectedUnits.size===0;
 
   document.getElementById('overall-stat').innerHTML = rowStatHtml(aggStats(ALL_UNITS));
+  document.getElementById('overall-cnt').textContent = ALL_UNITS.reduce((a,u)=>a+unitItemCount(u),0)+'문항';
 }
 
 document.getElementById('btn-select-all').addEventListener('click', ()=>{
