@@ -153,11 +153,11 @@
       <span class="progresschip" id="progress-chip"></span>
     </div>
     <div class="card">
-      <div class="unittag" id="q-unittag"></div>
+      <div class="unittag" id="q-unittag" style="display:none;"></div>
       <span class="modechip" id="q-modechip"></span>
       <div class="qprompt" id="q-prompt" style="margin-top:10px;"></div>
       <div class="choicegroups" id="q-choicegroups"></div>
-      <div class="actionrow"><button class="actbtn primary" id="btn-check">정답 확인</button></div>
+      <div class="actionrow"><button class="actbtn" id="btn-hint">💡 힌트</button><button class="actbtn primary" id="btn-check">정답 확인</button></div>
       <div class="feedback" id="q-feedback"></div>
       <div class="actionrow" id="next-row" style="display:none;"><button class="actbtn primary" id="btn-next">다음 문제</button></div>
     </div>
@@ -444,7 +444,9 @@ let mcSelections = {}; // blankIdx -> selected text (mc 모드에서만 사용)
 
 function renderQuestion(){
   mcSelections = {};
-  document.getElementById('q-unittag').textContent = curItem.subjName + ' · ' + curItem.unitName;
+  const tagEl = document.getElementById('q-unittag');
+  tagEl.textContent = curItem.subjName + ' · ' + curItem.unitName;
+  tagEl.style.display = 'none';
   const chip = document.getElementById('q-modechip');
   if(curMode === 'mc'){
     chip.textContent = '4지선다';
@@ -563,6 +565,10 @@ function checkAnswer(){
   renderProgress();
 }
 
+document.getElementById('btn-hint').addEventListener('click', ()=>{
+  const tag = document.getElementById('q-unittag');
+  tag.style.display = tag.style.display === 'none' ? '' : 'none';
+});
 document.getElementById('btn-check').addEventListener('click', checkAnswer);
 document.getElementById('btn-next').addEventListener('click', nextQuestion);
 
