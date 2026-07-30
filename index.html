@@ -71,7 +71,7 @@
   .modechip.mc{background:rgba(61,110,224,.13); color:var(--accent2);}
   .modechip.type{background:rgba(31,157,99,.13); color:var(--ok);}
 
-  .unittag{font-size:12px; color:var(--accent2); text-transform:none; margin-bottom:8px; font-weight:700;}
+  .unittag{font-size:12px; color:var(--accent2); text-transform:none; margin-top:12px; margin-bottom:8px; font-weight:700; padding:8px 0;}
   .qprompt{font-size:16px; font-weight:500; line-height:2.1; margin-bottom:4px; overflow-wrap:break-word;}
   .blankwrap{display:inline-block; margin:0 2px; vertical-align:middle;}
   .blankslot{
@@ -153,11 +153,11 @@
       <span class="progresschip" id="progress-chip"></span>
     </div>
     <div class="card">
-      <div class="unittag" id="q-unittag" style="display:none;"></div>
       <span class="modechip" id="q-modechip"></span>
       <div class="qprompt" id="q-prompt" style="margin-top:10px;"></div>
       <div class="choicegroups" id="q-choicegroups"></div>
       <div class="actionrow"><button class="actbtn" id="btn-hint">💡 힌트</button><button class="actbtn primary" id="btn-check">정답 확인</button></div>
+      <div class="unittag" id="q-unittag" style="display:none;"></div>
       <div class="feedback" id="q-feedback"></div>
       <div class="actionrow" id="next-row" style="display:none;"><button class="actbtn primary" id="btn-next">다음 문제</button></div>
     </div>
